@@ -4,13 +4,23 @@ using UnityEngine;
 
 public class PathNode //: MonoBehaviour
 {
-    public bool walkable;           //  Свободна для перемещения
-    public Vector3 worldPosition;   //  Позиция в глобальных координатах
-    private GameObject objPrefab;   //  Шаблон объекта
-    public GameObject body;         //  Объект для отрисовки
+    public enum NodeState
+    {
+        Walkable,
+        Active1,
+        Active2,
+        Obstrained,
+    }
+
+    public bool walkable => State != NodeState.Obstrained;
     
-    private PathNode parentNode = null;               //  откуда пришли
-    
+    public NodeState State; //  Свободна для перемещения
+    public Vector3 worldPosition; //  Позиция в глобальных координатах
+    private GameObject objPrefab; //  Шаблон объекта
+    public GameObject body; //  Объект для отрисовки
+
+    private PathNode parentNode = null; //  откуда пришли
+
     /// <summary>
     /// Родительская вершина - предшествующая текущей в пути от начальной к целевой
     /// </summary>
@@ -20,7 +30,7 @@ public class PathNode //: MonoBehaviour
         set => SetParent(value);
     }
 
-    private float distance = float.PositiveInfinity;  //  расстояние от начальной вершины
+    private float distance = float.PositiveInfinity; //  расстояние от начальной вершины
 
     /// <summary>
     /// Расстояние от начальной вершины до текущей (+infinity если ещё не развёртывали)
@@ -50,12 +60,12 @@ public class PathNode //: MonoBehaviour
     /// Конструктор вершины
     /// </summary>
     /// <param name="_objPrefab">объект, который визуализируется в вершине</param>
-    /// <param name="_walkable">проходима ли вершина</param>
+    /// <param name="state">проходима ли вершина</param>
     /// <param name="position">мировые координаты</param>
-    public PathNode(GameObject _objPrefab, bool _walkable, Vector3 position)
+    public PathNode(GameObject _objPrefab, NodeState state, Vector3 position)
     {
         objPrefab = _objPrefab;
-        walkable = _walkable;
+        State = state;
         worldPosition = position;
         body = GameObject.Instantiate(objPrefab, worldPosition, Quaternion.identity);
     }
@@ -68,22 +78,46 @@ public class PathNode //: MonoBehaviour
     /// <returns></returns>
     public static float Dist(PathNode a, PathNode b)
     {
-        return Vector3.Distance(a.body.transform.position, b.body.transform.position) + 40 * Mathf.Abs(a.body.transform.position.y - b.body.transform.position.y);
+        var positiona = a.body.transform.position;
+        var positionb = b.body.transform.position;
+        return Vector3.Distance(positiona, positionb) +
+               40 * Mathf.Abs(positiona.y - positionb.y);
     }
-    
-    /// <summary>
-    /// Подсветить вершину - перекрасить в красный
-    /// </summary>
-    public void Illuminate()
-    {
-        body.GetComponent<Renderer>().material.color = Color.red;
-    }
-    
-    /// <summary>
-    /// Снять подсветку с вершины - перекрасить в синий
-    /// </summary>
+
     public void Fade()
     {
-        body.GetComponent<Renderer>().material.color = Color.blue;
+        if (State == NodeState.Obstrained)
+            return;
+        SetState(NodeState.Walkable);
+    }
+
+    public void Illuminate(NodeState state = NodeState.Active1)
+    {
+        if (State == NodeState.Obstrained)
+            return;
+        SetState(state);
+    }
+
+    public void SetState(NodeState state)
+    {
+        State = state;
+        switch (state)
+        {
+            case NodeState.Walkable:
+                body.GetComponent<Renderer>().material.color = Color.blue;
+                break;
+            case NodeState.Obstrained:
+
+                body.GetComponent<Renderer>().material.color = Color.red;
+                break;
+            case NodeState.Active1:
+
+                body.GetComponent<Renderer>().material.color = Color.green;
+                break;
+            case NodeState.Active2:
+
+                body.GetComponent<Renderer>().material.color = Color.yellow;
+                break;
+        }
     }
 }
